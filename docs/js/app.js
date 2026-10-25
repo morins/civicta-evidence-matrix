@@ -10,11 +10,17 @@
  const analyze=api.analyze||(recs=>{const cells=rules.hciDimensions.map(h=>rules.policyStages.map(s=>recs.filter(r=>r.hci_dimension===h&&r.policy_stage===s)));const counted=cells.flat(2).length;
    return {cells,count:recs.length,counted,unclassified:recs.length-counted,gaps:cells.flat(1).filter(c=>!c.length).length,traceable:recs.filter(r=>r.policy_linkage==='반영 근거 확인').length,demo:recs.some(r=>r.verification==='시연용 가상자료'),countsByHci:rules.hciDimensions.map((name,i)=>({name,value:cells[i].reduce((a,b)=>a+b.length,0)}))};});
  const state={records:[], warnings:[], selected:null, focus:{i:0,j:0}};
+ // 범주의 뜻과 경계(rules.js categoryGuide). 없으면 이름만 보여 준다.
+ const guide=rules.categoryGuide||{policyStages:{},hciDimensions:{}};
+ const gStage=s=>guide.policyStages[s]||{},gDim=h=>guide.hciDimensions[h]||{};
  const html=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const options=(id,values)=>{ const el=$(id);values.forEach(value=>{const node=document.createElement('option');node.value=value;node.textContent=value;el.appendChild(node);});};
  options('verification-filter',rules.verificationStates);
  options('policy-filter',rules.policyStages);
  options('hci-filter',rules.hciDimensions);
+ const guideCard=(kind,name,g)=>`<div class="guide-card"><span class="guide-kind">${kind}</span><strong>${html(name)}</strong><p>${html(g.definition)}</p><dl><dt>예시</dt><dd>${html(g.example)}</dd><dt>구분 기준</dt><dd>${html(g.boundary)}</dd></dl></div>`;
+ function renderGuideAll(){const el=$('guide-all-body');if(!el||!guide.policyStages[rules.policyStages[0]])return;
+   el.innerHTML=`<div class="guide-group"><h4>정책 단계 (${rules.policyStages.length})</h4>${rules.policyStages.map(s=>guideCard('정책 단계',s,gStage(s))).join('')}</div><div class="guide-group"><h4>HCI 차원 (${rules.hciDimensions.length})</h4>${rules.hciDimensions.map(h=>guideCard('HCI 차원',h,gDim(h))).join('')}</div>`;}
  function tell(msg,isError=false){$('status-message').textContent=msg;$('status-message').classList.toggle('error',isError);}
  function load(records,warnings=[],label='사용자 자료'){
    const validated=normalize(records);
@@ -35,17 +41,20 @@
   $('stat-gap').textContent=empty?'—':`${result.gaps}/20`;$('stat-trace').textContent=result.traceable;
   $('data-type').textContent=result.demo?'가상 시연 데이터 포함':state.records.length?'사용자 문헌 데이터':'데이터 대기';
   const head=$('heatmap').querySelector('thead'),body=$('heatmap').querySelector('tbody');
-  head.innerHTML='<tr><th scope="col">HCI 차원 ↓ / 정책 →</th>'+rules.policyStages.map(s=>`<th scope="col">${html(s)}</th>`).join('')+'</tr>';
+  head.innerHTML='<tr><th scope="col">HCI 차원 ↓ / 정책 →</th>'+rules.policyStages.map(s=>`<th scope="col">${html(s)}${gStage(s).short?`<span class="def-short">${html(gStage(s).short)}</span>`:''}</th>`).join('')+'</tr>';
   // 키보드 접근성(Refs #5): 칸은 하나만 Tab으로 들어가고(roving tabindex) 방향키로 옮긴다. 다시 그린 뒤에도 초점을 되돌린다.
   const hadFocus=!!document.activeElement&&document.activeElement.classList.contains('heat-cell');
   body.replaceChildren();
   rules.hciDimensions.forEach((dimension,i)=>{
-    const tr=document.createElement('tr');const th=document.createElement('th');th.scope='row';th.textContent=dimension;tr.appendChild(th);
+    const tr=document.createElement('tr');const th=document.createElement('th');th.scope='row';th.textContent=dimension;
+    if(gDim(dimension).short){const sp=document.createElement('span');sp.className='def-short';sp.textContent=gDim(dimension).short;th.appendChild(sp);}
+    tr.appendChild(th);
     rules.policyStages.forEach((stage,j)=>{
       const cell=result.cells[i][j],td=document.createElement('td'),button=document.createElement('button');
       button.type='button';button.className='heat-cell level-'+(cell.length===0?0:cell.length===1?1:cell.length===2?2:3);
       button.textContent=String(cell.length);button.title=`${dimension} × ${stage}: ${cell.length}건`;
       button.setAttribute('aria-label',button.title);
+      if(gStage(stage).definition)button.title+=`\n정책 단계 — ${gStage(stage).definition}\nHCI 차원 — ${gDim(dimension).definition}`;
       button.setAttribute('aria-pressed',String(!!state.selected && state.selected.stage===stage && state.selected.dimension===dimension));
       button.dataset.i=i;button.dataset.j=j;button.tabIndex=(state.focus.i===i&&state.focus.j===j)?0:-1;
       button.addEventListener('click',()=>{state.focus={i,j};state.selected=state.selected && state.selected.stage===stage && state.selected.dimension===dimension?null:{stage,dimension};render();announce();});
@@ -58,6 +67,10 @@
   const visible=state.selected?rows.filter(r=>r.policy_stage===state.selected.stage && r.hci_dimension===state.selected.dimension):rows;
   const count=visible.length;
   $('selection-desc').textContent=state.selected?`${state.selected.dimension} × ${state.selected.stage} — ${count}건의 연결 문헌`:`필터 결과 ${rows.length}건의 문헌을 표시합니다.`;
+  // 칸을 고르면 그 칸의 두 범주가 무슨 뜻인지, 이웃 범주와 어떻게 가르는지 함께 보여 준다
+  const cg=$('category-guide');
+  if(cg){cg.hidden=!state.selected||!gStage(state.selected.stage).definition;
+    cg.innerHTML=cg.hidden?'':guideCard('정책 단계',state.selected.stage,gStage(state.selected.stage))+guideCard('HCI 차원',state.selected.dimension,gDim(state.selected.dimension));}
   $('empty-detail').hidden=count>0;
   const tbody=$('records-table').querySelector('tbody');tbody.replaceChildren();
   visible.forEach(r=>{
@@ -115,6 +128,7 @@
  $('reset-selection').addEventListener('click',()=>{state.selected=null;render();announce();});
  $('export-csv').addEventListener('click',()=>{if(typeof api.toCSV!=='function'){tell('js/export.js(B)가 아직 없습니다.',true);return;}const rows=currentRows();if(!rows.length){tell('내보낼 자료가 없습니다.',true);return;}download('civicta-literature.csv',api.toCSV(rows),'text/csv;charset=utf-8');});
  $('export-md').addEventListener('click',()=>{if(typeof api.toMarkdown!=='function'){tell('js/export.js(B)가 아직 없습니다.',true);return;}const rows=currentRows();if(!rows.length){tell('내보낼 자료가 없습니다.',true);return;}download('civicta-evidence-report.md',api.toMarkdown(rows,analyze(rows),rules,{total:state.records.length,allRecords:state.records,warnings:state.warnings,filters:{keyword:$('search').value,verification:$('verification-filter').value,policy_stage:$('policy-filter').value,hci_dimension:$('hci-filter').value}}),'text/markdown;charset=utf-8');});
+ renderGuideAll();
  render();
  if(missing.length)tell('연결되지 않은 담당 파일: '+missing.join(', ')+' — 예시는 임시 대체로 볼 수 있습니다.',true);
 })();
