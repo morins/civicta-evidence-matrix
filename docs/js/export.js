@@ -51,6 +51,13 @@ window.CIVICTA = window.CIVICTA || {};
    else lines.push('- 없음');
    const w=context.warnings||[];
    lines.push('',`## 입력 경고 (${w.length}건)`,...(w.length?w.map(t=>`- ${cellText(t)}`):['- 없음']));
+   // 보고서만 받은 사람도 범주의 뜻과 경계를 알 수 있게 rules.js의 정의를 덧붙인다
+   const g=rules.categoryGuide;
+   if(g){
+     lines.push('',`## 사용한 분류 기준 (rules.js ${rules.version})`,'| 구분 | 범주 | 정의 | 예시 | 구분 기준 |','| --- | --- | --- | --- | --- |');
+     [['정책 단계',rules.policyStages,g.policyStages],['HCI 차원',rules.hciDimensions,g.hciDimensions]].forEach(([kind,names,defs])=>
+       names.forEach(n=>{const d=defs[n]||{};lines.push(`| ${[kind,n,d.definition,d.example,d.boundary].map(v=>cellText(v||'')).join(' | ')} |`);}));
+   }
    return lines.join('\n');
  }
  api.toCSV=toCSV;api.toMarkdown=toMarkdown;api.unclassifiedReasons=unclassifiedReasons;

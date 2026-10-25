@@ -149,6 +149,21 @@ check('보고서(.md)에 건수와 한계 문구',[...N,...M,...E],()=>{
   const rows=A.validateAndNormalize(CIVICTA_DEMO).records,md=A.toMarkdown(rows,A.analyze(rows));
   assert(md.includes('집계 대상: 12건'));assert(md.includes('실증 분석 결과가 아닙니다'));assert(md.includes(CIVICTA_RULES.gapInterpretation));
 });
+check('분류 기준: 모든 범주에 짧은 정의·정의·예시·구분 기준이 있고, 범주를 더하거나 빼지 않음',[],()=>{
+  const R=CIVICTA_RULES,G=R.categoryGuide;
+  assert.deepEqual(Object.keys(G.policyStages),R.policyStages);assert.deepEqual(Object.keys(G.hciDimensions),R.hciDimensions);
+  for(const d of [...Object.values(G.policyStages),...Object.values(G.hciDimensions)])
+    for(const k of ['short','definition','example','boundary'])assert(typeof d[k]==='string'&&d[k].trim().length>0,k);
+  assert([...Object.values(G.policyStages),...Object.values(G.hciDimensions)].every(d=>d.short.length<=16));
+});
+check('보고서(.md) 끝에 사용한 분류 기준 9개 범주가 붙고, 앞의 집계 부분은 그대로',[...P,...N,...M,...E],()=>{
+  const R=CIVICTA_RULES,rows=A.validateAndNormalize(A.parseCSV(CIVICTA_REAL_CSV).records).records,m=A.analyze(rows);
+  const md=A.toMarkdown(rows,m,R);const at=md.indexOf('## 사용한 분류 기준');
+  assert(at>0);const tail=md.slice(at);
+  for(const n of [...R.policyStages,...R.hciDimensions])assert(tail.includes(`| ${n} | ${R.categoryGuide[n in R.categoryGuide.policyStages?'policyStages':'hciDimensions'][n].definition} |`),n);
+  const {categoryGuide,...without}=R;const before=A.toMarkdown(rows,m,without);
+  assert.equal(md.slice(0,at).trimEnd(),before.trimEnd());
+});
 check('가상 예시 CSV와 demo-data.js가 같음',[...P],()=>{
   assert.deepEqual(A.parseCSV(read('demo-literature.csv')).records.map(r=>r.id),CIVICTA_DEMO.map(r=>r.id));
 });

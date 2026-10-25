@@ -120,12 +120,14 @@
             <div class="table-scroll"><table class="heatmap" id="heatmap" aria-label="HCI 차원과 정책단계별 문헌 수"><thead></thead><tbody></tbody></table></div>
             <div class="legend"><span>0건</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><span>상대적으로 많음</span></div>
             <p class="caution">※ 빈칸은 <strong>현재 입력한 문헌에서 관찰되지 않은 조합</strong>입니다. 모든 연구에서 해당 근거가 없다는 뜻은 아닙니다.</p>
+            <details class="guide-all" id="guide-all"><summary>분류 기준 보기 <span>정책 단계 4 · HCI 차원 5의 정의 · 예시 · 구분 기준</span></summary><div id="guide-all-body" class="guide-all-body"></div></details>
           </div>
           <div class="chart-col"><div class="matrix-top"><h3>HCI 차원별 분포</h3><span class="mini-label">문헌 수</span></div><div id="bar-chart" class="bars" role="img" aria-label="HCI 차원별 문헌 분포"></div><div class="chart-note">정량적 빈도만을 보여 주며 효과 크기나 연구 품질을 나타내지 않습니다.</div></div>
         </div>
       </section>
       <section class="panel" aria-labelledby="detail-title">
         <div class="section-heading"><div><span class="section-number">03 / SOURCE TRACE</span><h2 id="detail-title">문헌별 근거 추적</h2><p id="selection-desc">전체 문헌을 표시합니다.</p></div><button class="button subtle small" type="button" id="reset-selection">선택 해제</button></div>
+        <div class="category-guide" id="category-guide" hidden aria-live="polite"></div>
         <div class="table-scroll"><table id="records-table" class="records-table"><thead><tr><th>ID / 연도</th><th>문헌 제목·출처</th><th>정책 단계</th><th>HCI 차원</th><th>검토 상태</th><th>정책 반영</th></tr></thead><tbody></tbody></table></div>
         <p class="empty-message" id="empty-detail">분석할 문헌을 불러오면 여기에 표시됩니다.</p>
       </section>
